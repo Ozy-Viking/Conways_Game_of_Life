@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "conways-game-of-life"
+version = "0.1.0"
+description = ""
+authors = ["ozy-viking <zthankin@gmail.com>"]
+readme = "README.md"
+packages = [{ include = "conways" }]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+icecream = "^2.1.3"
+pygame = "^2.1.2"
+loguru = "^0.6.0"
+numpy = "^1.24.2"
+tqdm = "^4.64.1"
+pandas = "^1.5.3"
+
+
+[tool.poetry.group.dev.dependencies]
+yelp-gprof2dot = "^1.2.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

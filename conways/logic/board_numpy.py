@@ -48,7 +48,7 @@ class Board:
         self.board_size = no_of_cells
         self.board: np.ndarray = np.array(
             [
-                [Cell(i, j, no_of_cells).set_neighbours() for i in range(no_of_cells)]
+                [Cell(i, j, no_of_cells) for i in range(no_of_cells)]
                 for j in range(no_of_cells)
                 ]
             )
@@ -113,13 +113,15 @@ class Board:
         """
         # state_board = np.array(self.get_state_board())
 
-        for cell, neighbours in self.neighbours_dict.items():
-            # logger.trace(f'{cell}: {neighbours = }') # taxing on time
-            alive_neighbours = 0
-            for neighbour in neighbours:
-                if neighbour.alive:
-                    alive_neighbours += 1
-            cell.alive_neighbours = alive_neighbours
+        # for cell, neighbours in self.neighbours_dict.items():
+        # logger.trace(f'{cell}: {neighbours = }') # taxing on time
+        # alive_neighbours = 0
+        # for neighbour in neighbours:
+        #     if neighbour.alive:
+        #         alive_neighbours += 1
+        # cell.alive_neighbours = alive_neighbours
+        for _, cell in np.ndenumerate(self.board):
+            cell.set_alive_neighbours()
         return self
 
     def update_state(self) -> Board:
@@ -151,8 +153,9 @@ class Board:
 
     def set_neighbours(self):
         for _, cell in iter(self):
-            neighbours = list()
-            for pos in cell.neighbours:
-                neighbours.append(self.board[pos.y][pos.x])
+            neighbours = set()
+            for pos in cell.neighbour_position():
+                neighbours.add(self.board[pos.y][pos.x])
             self.neighbours_dict[cell] = neighbours
+            cell.neighbours = neighbours
         # todo: try storing the uncalled property of alive then call it.

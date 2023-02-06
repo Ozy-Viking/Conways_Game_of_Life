@@ -114,7 +114,7 @@ class Board:
         # state_board = np.array(self.get_state_board())
 
         for cell, neighbours in self.neighbours_dict.items():
-            # logger.trace(f'{cell}: {neighbours = }')
+            # logger.trace(f'{cell}: {neighbours = }') # taxing on time
             alive_neighbours = 0
             for neighbour in neighbours:
                 if neighbour.alive:
@@ -151,8 +151,8 @@ class Board:
 
     def set_neighbours(self):
         for _, cell in iter(self):
-            neighbours = set()
+            neighbours = list()
             for pos in cell.neighbours:
-                neighbours.add(self.board[pos.y][pos.x])
+                neighbours.append(self.board[pos.y][pos.x])
             self.neighbours_dict[cell] = neighbours
         # todo: try storing the uncalled property of alive then call it.

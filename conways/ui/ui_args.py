@@ -31,7 +31,7 @@ def arg_parser() -> ArgumentParser:
         "--random",
         action="store_true",
         help="Start with all cells set to random states. Default: False",
-    )
+        )
     ui_group = parser.add_argument_group("UI Choice")
     ui_choice = ui_group.add_mutually_exclusive_group(required=False)
     ui_choice.add_argument("-p", action="store_true", help="Use Pygame as UI")
@@ -39,10 +39,16 @@ def arg_parser() -> ArgumentParser:
     parser.add_argument("-v", "--verbose", action="count", default=0)
     parser.add_argument(
         "-n", help="Number of iterations to run.", type=int, metavar="int", default=0
-    )
+        )
     parser.add_argument(
         "-w", "--width", help="Width of grid.", type=int, metavar="int", default=50
-    )
+        )
+    parser.add_argument(
+        "-f", "--fps", help="Max FPS", type=int, metavar="int", default=60
+        )
+    parser.add_argument(
+        "-l", "--loading", help="Enable loading bar for set number of iterations.", action="store_true"
+        )
 
     return parser
 
@@ -51,9 +57,10 @@ class Options:
     """
     Object to hold the arguments passed in via the CLI.
     """
-
+    fps: int
     width: int
     random: bool
+    loading: bool
     p: bool
     c: bool
     n: int

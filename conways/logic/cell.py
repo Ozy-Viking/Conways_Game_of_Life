@@ -7,33 +7,40 @@ Author: Zack Hankin
 Started: 3/02/2023
 """
 from __future__ import annotations
+
+from dataclasses import dataclass, field
+from turtle import position
+
 from .util import State, Position, NEIGHBOURS_DEFAULT, Colour, logger
 
 logger.success(f"{__name__} importing...")
 
 
+@dataclass(slots=True)
 class Cell:
     """
     Cell object
     """
-
-    def __init__(
-            self, x: int, y: int, board_size: int, state: State = State.DEAD
-            ) -> None:
-        self.x = x
-        self.y = y
-        self.position: Position = Position(x=x, y=y)
-        self.state = state
-        self.alive: bool = True if self.state is State.ALIVE else False
-        self.alive_neighbours: int = 0
+    x: int
+    y: int
+    is_alive: bool = False
+    alive_neighbours: int = field(init=False)
 
     def toggle(self) -> Cell:
-        self.state = State.DEAD if self.state is State.ALIVE else State.ALIVE
-        self.alive = True if self.state is State.ALIVE else False
+        """
+        Toggle the cell from alive to dead.
+
+        Returns:
+            Self
+        """
+        self.is_alive = False if self.is_alive else True
         return self
 
     def __hash__(self) -> int:
         return hash((self.x, self.y))
 
+    def __eq__(self, other):
+        return (self.x, self.y) == (other.x, other.y)
+
     def __repr__(self) -> str:
-        return f"Cell({self.x}, {self.y}, {self.state.name})"
+        return f"Cell({self.x}, {self.y}, {State(self.is_alive).name})"

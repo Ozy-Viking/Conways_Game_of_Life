@@ -6,14 +6,11 @@ Started: 3/02/2023
 """
 from __future__ import annotations
 
-from itertools import count
 from random import randint, Random
 from typing import Generator, Optional
-
 import tqdm as tqdm
 
-from conways.performance import Timer
-from .util import Position, State, logger
+from .util import Condition, NEIGHBOURS_DEFAULT, Position, logger
 from .cell import Cell
 
 logger.success(f"{__name__} importing...")
@@ -24,28 +21,40 @@ class Board:
     board[pos.y][pos.x]
     """
 
+    neighbours = list(NEIGHBOURS_DEFAULT)
+    neighbours_dict: dict[Cell, list[Cell]] = dict()
+
     def __init__(
             self,
-            no_of_cells: int,
-            live_conditions: tuple[int, int] = (2, 3),
-            birth: tuple[int, ...] = (3,),
+            num_of_cells: int,
+            live_conditions: Condition = Condition(2, 3),
+            birth_condition: Condition = Condition(3),
             num_of_runs: int = 0,
+            loading_bar: bool = False
             ):
         """
 
         Args:
-            no_of_cells (int): Number of cells across or down on the board.
-            live_conditions (tuples[int, int]): the number of neighbours around a cell where you live.
-            birth (int): number of neighbours which a cell is born.
+            num_of_cells (int): Number of cells across or down on the board.
+            live_conditions (Condition): the number of neighbours around a cell where you live.
+            birth_condition (Condition): number of neighbours which a cell is born.
         """
+
         self.num_of_runs = num_of_runs
-        self.board_size = no_of_cells
-        self.board = [
-            [Cell(i, j, no_of_cells).set_neighbours() for i in range(no_of_cells)]
-            for j in range(no_of_cells)
+        self.board_size = num_of_cells
+        self.board: list[list[Cell]] = [
+            [Cell(i, j) for i in range(num_of_cells)]
+            for j in range(num_of_cells)
             ]
-        self.birth = birth
-        self.live_conditions = live_conditions
+        self.set_neighbours()
+        self.birth_condition = birth_condition
+        self.birth_condition_set = self.birth_condition.contains
+        logger.debug(f"Birth condition: {self.birth_condition_set}")
+        self.live_condition = live_conditions
+        self.live_condition_set = self.live_condition.contains
+        logger.debug(f"Live condition: {self.live_condition_set}")
+        self.loading_bar: bool = loading_bar
+        logger.success("Board initialised: ")
 
     def __len__(self):
         return len(self.board) * len(self.board[0])
@@ -62,7 +71,8 @@ class Board:
             Self
         """
         if not random_seed:
-            random_seed = randint(0, 100_000_000)
+            random_seed = randint(0, 100)
+        logger.info(f"Random seed: {random_seed}")
 
         random = Random(random_seed)
         for row in self.board:
@@ -71,7 +81,11 @@ class Board:
                     cell.toggle()
         return self
 
-    # @Timer.time
+    def reset(self) -> Board:
+        for cell in self.neighbours_dict.keys():
+            cell.is_alive = False
+        return self
+
     def generation(self) -> Board:
         """
         One generation.
@@ -83,9 +97,15 @@ class Board:
         self.update_state()
         return self
 
-    def run_for_set_amount(self):
-        for _ in tqdm.trange(self.num_of_runs):
-            self.generation()
+    def run_for_set_amount(self, runs: Optional[int] = None):
+        runs = self.num_of_runs if runs is None else runs
+        match self.loading_bar:
+            case True:
+                for _ in tqdm.trange(runs):
+                    self.generation()
+            case False:
+                for _ in range(runs):
+                    self.generation()
 
     def check_state(self) -> Board:
         """
@@ -93,14 +113,14 @@ class Board:
         Returns:
             Self
         """
-        for j, row in enumerate(self.board):
-            for i, cell in enumerate(row):
-                neighbours = cell.neighbours
-                alive_neighbours = 0
-                for pos in neighbours:
-                    if self.board[pos.y][pos.x].state is State.ALIVE:
-                        alive_neighbours += 1
-                cell.alive_neighbours = alive_neighbours
+        # state_board = np.array(self.get_state_board())
+
+        for cell, neighbours in self.neighbours_dict.items():
+            # logger.trace(f'{cell}: {neighbours = }') # taxing on time only uncomment for tracing.
+            cell.alive_neighbours = 0
+            for neighbour in neighbours:
+                if neighbour.is_alive:
+                    cell.alive_neighbours += 1
         return self
 
     def update_state(self) -> Board:
@@ -110,18 +130,41 @@ class Board:
         Returns:
             Self
         """
-        for j, row in enumerate(self.board):
-            for i, cell in enumerate(row):
-                no_alive: int = cell.alive_neighbours
-                if cell.state == State.ALIVE and (
-                        no_alive < self.live_conditions[0]
-                        or no_alive > self.live_conditions[1]
-                ):
-                    cell.toggle()
-                elif cell.state == State.DEAD and no_alive in self.birth:
+        for row in self.board:
+            for cell in row:
+                num_alive: int = cell.alive_neighbours
+                if (((not cell.is_alive) and (num_alive in self.birth_condition_set))
+                        or (cell.is_alive and (num_alive not in self.live_condition_set))):
                     cell.toggle()
         return self
 
     def toggle_cell(self, cell: Position) -> Board:
         self.board[cell.y][cell.x].toggle()
         return self
+
+    def __iter__(self) -> Generator[tuple[Position, Cell], None, None]:
+        for j, row in enumerate(self.board):
+            for i, cell in enumerate(row):
+                yield Position(i, j), cell
+
+    def set_neighbours(self):
+        self.neighbours_dict = dict()
+        for _, cell in iter(self):
+            neighbours = list()
+            for pos in self.neighbour_position(cell):
+                neighbours.append(self.board[pos.y][pos.x])
+            self.neighbours_dict[cell] = neighbours
+        return self
+
+    def neighbour_position(self, cell: Cell | Position) -> list[Position]:
+        neighbours: list[Position] = list()
+        pos: Position = Position(cell.x, cell.y)
+        offset: Position
+        for idx, offset in enumerate(NEIGHBOURS_DEFAULT):
+            temp_pos: Position = Position(pos.x + offset.x, pos.y + offset.y)
+            if temp_pos.x < 0 or temp_pos.x > self.board_size - 1:
+                continue
+            if temp_pos.y < 0 or temp_pos.y > self.board_size - 1:
+                continue
+            neighbours.append(temp_pos)
+        return neighbours

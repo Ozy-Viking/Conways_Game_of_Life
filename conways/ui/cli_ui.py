@@ -19,13 +19,13 @@ logger.success(f"{__name__} importing...")
 class CLI:
     def __init__(self, board, *, number_of_generations: int):
         self.number_of_generations = number_of_generations
-        self.board: Board = board
+        self._board: Board = board
         self.time_to_run: int = 0
 
     def run(self):
         logger.info(f"Starting {self.number_of_generations:,} generation/s.")
         start = time.perf_counter_ns()
-        self.board.run_for_set_amount()
+        self._board.run_for_set_amount()
         end = time.perf_counter_ns()
         logger.success(f"Finished {self.number_of_generations:,} generation/s.")
         self.time_to_run = end - start

@@ -12,12 +12,12 @@ from typing import Protocol
 
 from icecream import ic
 from conways import Board, CLI, PygameUI, Timer, Options
-from conways.logic import logger
+from conways.logic import logger, Condition
 
 
 # noinspection PyMissingOrEmptyDocstring
 class UIType(Protocol):
-    board: Board
+    _board: Board
 
     def run(self):
         ...
@@ -30,7 +30,7 @@ def setup_ui(args: Options, board: Board) -> UIType:
             args.set_ui()
             return setup_ui(args, board)
         case "pygame":
-            ui = PygameUI(board=board)
+            ui = PygameUI(board=board, fps=args.fps)
         case "CLI":
             ui = CLI(board, number_of_generations=args.n)
     return ui
@@ -41,7 +41,7 @@ def main() -> int:
         logger.success("Started Conway's Game of Life")
         options = Options()
         logger.debug(f"UI: {options.ui}")
-        board = Board(options.width, num_of_runs=options.n)
+        board = Board(options.width, num_of_runs=options.n, loading_bar=options.loading)
         logger.info(f"Total number of cells: {len(board):,}")
         ui = setup_ui(options, board)
         if options.random:
